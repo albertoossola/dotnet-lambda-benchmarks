@@ -1,5 +1,8 @@
 # .NET Lambda deployment benchmarks
 
+> [!NOTE]
+> 🚀 See the [Benchmark Results](https://albertoossola.github.io/dotnet-lambda-benchmarks/)
+
 This AWS CDK project deploys eleven .NET 10 Lambda functions that run four workloads through managed CLR, SnapStart, and Native AOT deployment strategies.
 
 | Workload | Deployment variants | What it does |
