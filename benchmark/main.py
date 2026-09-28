@@ -93,7 +93,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("benchmark-results"),
+        default=Path(__file__).resolve().parent.parent / "docs",
         help="Output directory",
     )
     return parser.parse_args()
