@@ -1,0 +1,22 @@
+{
+  "name": "dotnet-lambda-benchmarks",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy -y",
+    "destroy": "cdk destroy"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "aws-cdk": "^2.215.0",
+    "aws-cdk-lib": "^2.215.0",
+    "constructs": "^10.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.4"
+  }
+}

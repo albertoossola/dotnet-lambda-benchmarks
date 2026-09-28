@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>.NET Lambda benchmark results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --ink: #f6f1ff;
+            --muted: #b4a8c9;
+            --line: #3b2d50;
+            --paper: #100c16;
+            --card: #1a1323;
+            --accent: #c084fc;
+            --accent-light: #302047;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(circle at 80% -10%, #43205f 0, #100c16 46%);
+            color: var(--ink);
+            font: 15px/1.5 'Space Grotesk', ui-sans-serif, sans-serif;
+        }
+
+        main {
+            max-width: 1180px;
+            margin: auto;
+            padding: 48px 24px 72px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: end;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 28px;
+            margin-bottom: 32px;
+        }
+
+        h1,
+        h2,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font: 700 clamp(2rem, 5vw, 4rem)/.98 'Space Grotesk', ui-sans-serif, sans-serif;
+            letter-spacing: 0;
+        }
+
+        h2 {
+            font: 700 1.7rem 'Space Grotesk', ui-sans-serif, sans-serif;
+        }
+
+        .dek {
+            color: var(--muted);
+            margin-top: 12px;
+        }
+
+        .stamp {
+            color: var(--muted);
+            white-space: nowrap;
+            font-size: .85rem;
+        }
+
+        .workload {
+            background: color-mix(in srgb, var(--card) 94%, white 6%);
+            border: 1px solid var(--line);
+            margin: 24px 0;
+            box-shadow: 0 16px 42px #0008;
+        }
+
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 24px 26px 18px;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-size: .72rem;
+            font-weight: 800;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .count {
+            color: var(--muted);
+            font-size: .85rem;
+        }
+
+        .summaries {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            padding: 0 26px 24px;
+        }
+
+        .summary {
+            background: var(--accent-light);
+            border-left: 4px solid var(--accent);
+            padding: 14px 16px;
+        }
+
+        .deployment {
+            display: block;
+            color: var(--muted);
+            font-size: .78rem;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 6px;
+        }
+
+        .summary-stats>div {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .summary-stats strong {
+            display: block;
+            font: 700 1.25rem 'IBM Plex Mono', ui-monospace, monospace;
+            margin: 2px 0;
+        }
+
+        .summary-stats small {
+            display: block;
+            color: var(--muted);
+            font-size: .72rem;
+        }
+
+        .chart {
+            border-top: 1px solid var(--line);
+            padding: 20px 26px 24px;
+        }
+
+        .chart-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        h3 {
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: .82rem;
+        }
+
+        select {
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: #100c16;
+            color: var(--ink);
+            padding: 7px 28px 7px 9px;
+            font: inherit;
+        }
+
+        .chart-canvas {
+            position: relative;
+            height: 280px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border-top: 1px solid var(--line);
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 760px;
+        }
+
+        th,
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        th:first-child,
+        td:first-child {
+            text-align: left;
+        }
+
+        thead th {
+            color: var(--muted);
+            font-size: .72rem;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            background: #17101f;
+        }
+
+        tbody th {
+            font-weight: 650;
+        }
+
+        tbody tr:last-child th,
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background: #271936;
+        }
+
+        @media (max-width:650px) {
+            main {
+                padding: 28px 14px 48px;
+            }
+
+            header {
+                display: block;
+            }
+
+            .stamp {
+                display: block;
+                margin-top: 18px;
+            }
+
+            .section-heading {
+                padding: 20px 16px 14px;
+            }
+
+            .summaries,
+            .chart {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .chart-heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <header>
+            <div>
+                <p class="eyebrow">Benchmark report</p>
+                <h1>.NET Lambda results</h1>
+                <p class="dek">Median performance grouped by workload and deployment strategy.</p>
+            </div>
+            <div class="stamp">Generated 2026-09-28 13:25 UTC<br>300 metric observations</div>
+        </header>
+        <section class="workload">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Workload</p>
+                    <h2>dynamo-query</h2>
+                </div><span class="count">3 deployment targets</span>
+            </div>
+            <div class="summaries">
+                <article class="summary"><span class="deployment">StandardCLR · 512 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>3.0 ms</strong><small>warm p50</small></div>
+                        <div><strong>1,252.4 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">SnapStart · 512 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>2.6 ms</strong><small>warm p50</small></div>
+                        <div><strong>849.8 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">NativeAOT · 512 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>1.8 ms</strong><small>warm p50</small></div>
+                        <div><strong>292.9 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+            </div>
+            <div class="chart">
+                <div class="chart-heading">
+                    <h3>Metric trend</h3><label>Metric <select class="metric-select" data-workload="dynamo-query">
+                            <option value="TotalExecutionMs" selected>Total execution time</option>
+                            <option value="DurationMs">DurationMs</option>
+                            <option value="InitDurationMs">InitDurationMs</option>
+                            <option value="RestoreDurationMs">RestoreDurationMs</option>
+                            <option value="ColdStartMs">ColdStartMs</option>
+                            <option value="WarmStartMs">WarmStartMs</option>
+                            <option value="MemoryWorkingSetMb">MemoryWorkingSetMb</option>
+                            <option value="ManagedHeapMb">ManagedHeapMb</option>
+                        </select></label>
+                </div>
+                <div class="chart-canvas"><canvas data-chart="dynamo-query"></canvas></div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Function</th>
+                            <th>Deployment</th>
+                            <th>Memory (MB)</th>
+                            <th>DurationMs (warm)</th>
+                            <th>DurationMs (cold total)</th>
+                            <th>InitDurationMs</th>
+                            <th>RestoreDurationMs</th>
+                            <th>ColdStartMs</th>
+                            <th>WarmStartMs</th>
+                            <th>MemoryWorkingSetMb</th>
+                            <th>ManagedHeapMb</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">DynamoQueryClr</th>
+                            <td>StandardCLR</td>
+                            <td>512</td>
+                            <td>3.0 ms</td>
+                            <td>1,252.4 ms</td>
+                            <td>255.2 ms</td>
+                            <td>—</td>
+                            <td>1,208.6 ms</td>
+                            <td>3.0 ms</td>
+                            <td>82.5 MB</td>
+                            <td>2.1 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">DynamoQuerySnapStart</th>
+                            <td>SnapStart</td>
+                            <td>512</td>
+                            <td>2.6 ms</td>
+                            <td>849.8 ms</td>
+                            <td>—</td>
+                            <td>814.5 ms</td>
+                            <td>152.2 ms</td>
+                            <td>2.6 ms</td>
+                            <td>86.1 MB</td>
+                            <td>2.6 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">DynamoQueryNativeAot</th>
+                            <td>NativeAOT</td>
+                            <td>512</td>
+                            <td>1.8 ms</td>
+                            <td>292.9 ms</td>
+                            <td>78.7 ms</td>
+                            <td>—</td>
+                            <td>253.9 ms</td>
+                            <td>1.8 ms</td>
+                            <td>24.9 MB</td>
+                            <td>0.7 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="workload">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Workload</p>
+                    <h2>image-processing</h2>
+                </div><span class="count">3 deployment targets</span>
+            </div>
+            <div class="summaries">
+                <article class="summary"><span class="deployment">StandardCLR · 512 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>2,586.2 ms</strong><small>warm p50</small></div>
+                        <div><strong>6,422.9 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">SnapStart · 512 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>2,077.4 ms</strong><small>warm p50</small></div>
+                        <div><strong>4,204.4 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">NativeAOT · 512 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>1,356.3 ms</strong><small>warm p50</small></div>
+                        <div><strong>1,782.6 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+            </div>
+            <div class="chart">
+                <div class="chart-heading">
+                    <h3>Metric trend</h3><label>Metric <select class="metric-select" data-workload="image-processing">
+                            <option value="TotalExecutionMs" selected>Total execution time</option>
+                            <option value="DurationMs">DurationMs</option>
+                            <option value="InitDurationMs">InitDurationMs</option>
+                            <option value="RestoreDurationMs">RestoreDurationMs</option>
+                            <option value="ColdStartMs">ColdStartMs</option>
+                            <option value="WarmStartMs">WarmStartMs</option>
+                            <option value="MemoryWorkingSetMb">MemoryWorkingSetMb</option>
+                            <option value="ManagedHeapMb">ManagedHeapMb</option>
+                        </select></label>
+                </div>
+                <div class="chart-canvas"><canvas data-chart="image-processing"></canvas></div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Function</th>
+                            <th>Deployment</th>
+                            <th>Memory (MB)</th>
+                            <th>DurationMs (warm)</th>
+                            <th>DurationMs (cold total)</th>
+                            <th>InitDurationMs</th>
+                            <th>RestoreDurationMs</th>
+                            <th>ColdStartMs</th>
+                            <th>WarmStartMs</th>
+                            <th>MemoryWorkingSetMb</th>
+                            <th>ManagedHeapMb</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">ImageProcessingClr</th>
+                            <td>StandardCLR</td>
+                            <td>512</td>
+                            <td>2,586.2 ms</td>
+                            <td>6,422.9 ms</td>
+                            <td>262.8 ms</td>
+                            <td>—</td>
+                            <td>6,402.3 ms</td>
+                            <td>2,586.2 ms</td>
+                            <td>107.9 MB</td>
+                            <td>6.8 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">ImageProcessingSnapStart</th>
+                            <td>SnapStart</td>
+                            <td>512</td>
+                            <td>2,077.4 ms</td>
+                            <td>4,204.4 ms</td>
+                            <td>—</td>
+                            <td>842.7 ms</td>
+                            <td>3,496.3 ms</td>
+                            <td>2,077.4 ms</td>
+                            <td>113.8 MB</td>
+                            <td>6.0 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">ImageProcessingNativeAot</th>
+                            <td>NativeAOT</td>
+                            <td>512</td>
+                            <td>1,356.3 ms</td>
+                            <td>1,782.6 ms</td>
+                            <td>87.2 ms</td>
+                            <td>—</td>
+                            <td>1,737.5 ms</td>
+                            <td>1,356.3 ms</td>
+                            <td>37.5 MB</td>
+                            <td>4.1 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="workload">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Workload</p>
+                    <h2>csv-processing</h2>
+                </div><span class="count">3 deployment targets</span>
+            </div>
+            <div class="summaries">
+                <article class="summary"><span class="deployment">StandardCLR · 1024 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>3,459.3 ms</strong><small>warm p50</small></div>
+                        <div><strong>5,371.2 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">SnapStart · 1024 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>2,688.9 ms</strong><small>warm p50</small></div>
+                        <div><strong>6,052.5 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">NativeAOT · 1024 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>2,587.5 ms</strong><small>warm p50</small></div>
+                        <div><strong>3,116.3 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+            </div>
+            <div class="chart">
+                <div class="chart-heading">
+                    <h3>Metric trend</h3><label>Metric <select class="metric-select" data-workload="csv-processing">
+                            <option value="TotalExecutionMs" selected>Total execution time</option>
+                            <option value="DurationMs">DurationMs</option>
+                            <option value="InitDurationMs">InitDurationMs</option>
+                            <option value="RestoreDurationMs">RestoreDurationMs</option>
+                            <option value="ColdStartMs">ColdStartMs</option>
+                            <option value="WarmStartMs">WarmStartMs</option>
+                            <option value="MemoryWorkingSetMb">MemoryWorkingSetMb</option>
+                            <option value="ManagedHeapMb">ManagedHeapMb</option>
+                        </select></label>
+                </div>
+                <div class="chart-canvas"><canvas data-chart="csv-processing"></canvas></div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Function</th>
+                            <th>Deployment</th>
+                            <th>Memory (MB)</th>
+                            <th>DurationMs (warm)</th>
+                            <th>DurationMs (cold total)</th>
+                            <th>InitDurationMs</th>
+                            <th>RestoreDurationMs</th>
+                            <th>ColdStartMs</th>
+                            <th>WarmStartMs</th>
+                            <th>MemoryWorkingSetMb</th>
+                            <th>ManagedHeapMb</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">CsvProcessingClr</th>
+                            <td>StandardCLR</td>
+                            <td>1024</td>
+                            <td>3,459.3 ms</td>
+                            <td>5,371.2 ms</td>
+                            <td>249.6 ms</td>
+                            <td>—</td>
+                            <td>5,267.1 ms</td>
+                            <td>3,459.3 ms</td>
+                            <td>627.9 MB</td>
+                            <td>480.6 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">CsvProcessingSnapStart</th>
+                            <td>SnapStart</td>
+                            <td>1024</td>
+                            <td>2,688.9 ms</td>
+                            <td>6,052.5 ms</td>
+                            <td>—</td>
+                            <td>824.9 ms</td>
+                            <td>5,276.8 ms</td>
+                            <td>2,688.9 ms</td>
+                            <td>671.0 MB</td>
+                            <td>601.7 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">CsvProcessingNativeAot</th>
+                            <td>NativeAOT</td>
+                            <td>1024</td>
+                            <td>2,587.5 ms</td>
+                            <td>3,116.3 ms</td>
+                            <td>81.4 ms</td>
+                            <td>—</td>
+                            <td>3,071.6 ms</td>
+                            <td>2,587.5 ms</td>
+                            <td>602.7 MB</td>
+                            <td>479.3 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="workload">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Workload</p>
+                    <h2>geospatial-lookup</h2>
+                </div><span class="count">3 deployment targets</span>
+            </div>
+            <div class="summaries">
+                <article class="summary"><span class="deployment">StandardCLR · 4096 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>0.1 ms</strong><small>warm p50</small></div>
+                        <div><strong>2,578.4 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">SnapStart · 4096 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>0.1 ms</strong><small>warm p50</small></div>
+                        <div><strong>719.4 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+                <article class="summary"><span class="deployment">NativeAOT · 4096 MB</span>
+                    <div class="summary-stats">
+                        <div><strong>0.1 ms</strong><small>warm p50</small></div>
+                        <div><strong>2,376.7 ms</strong><small>cold total (launch + run)</small></div>
+                    </div>
+                </article>
+            </div>
+            <div class="chart">
+                <div class="chart-heading">
+                    <h3>Metric trend</h3><label>Metric <select class="metric-select" data-workload="geospatial-lookup">
+                            <option value="TotalExecutionMs" selected>Total execution time</option>
+                            <option value="DurationMs">DurationMs</option>
+                            <option value="InitDurationMs">InitDurationMs</option>
+                            <option value="RestoreDurationMs">RestoreDurationMs</option>
+                            <option value="ColdStartMs">ColdStartMs</option>
+                            <option value="WarmStartMs">WarmStartMs</option>
+                            <option value="MemoryWorkingSetMb">MemoryWorkingSetMb</option>
+                            <option value="ManagedHeapMb">ManagedHeapMb</option>
+                        </select></label>
+                </div>
+                <div class="chart-canvas"><canvas data-chart="geospatial-lookup"></canvas></div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Function</th>
+                            <th>Deployment</th>
+                            <th>Memory (MB)</th>
+                            <th>DurationMs (warm)</th>
+                            <th>DurationMs (cold total)</th>
+                            <th>InitDurationMs</th>
+                            <th>RestoreDurationMs</th>
+                            <th>ColdStartMs</th>
+                            <th>WarmStartMs</th>
+                            <th>MemoryWorkingSetMb</th>
+                            <th>ManagedHeapMb</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">GeoSpatialLookupClr</th>
+                            <td>StandardCLR</td>
+                            <td>4096</td>
+                            <td>0.1 ms</td>
+                            <td>2,578.4 ms</td>
+                            <td>2,577.8 ms</td>
+                            <td>—</td>
+                            <td>2,377.6 ms</td>
+                            <td>0.1 ms</td>
+                            <td>116.0 MB</td>
+                            <td>17.0 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">GeoSpatialLookupSnapStart</th>
+                            <td>SnapStart</td>
+                            <td>4096</td>
+                            <td>0.1 ms</td>
+                            <td>719.4 ms</td>
+                            <td>—</td>
+                            <td>716.6 ms</td>
+                            <td>68.0 ms</td>
+                            <td>0.1 ms</td>
+                            <td>119.8 MB</td>
+                            <td>17.2 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">GeoSpatialLookupNativeAot</th>
+                            <td>NativeAOT</td>
+                            <td>4096</td>
+                            <td>0.1 ms</td>
+                            <td>2,376.7 ms</td>
+                            <td>2,376.6 ms</td>
+                            <td>—</td>
+                            <td>2,321.6 ms</td>
+                            <td>0.1 ms</td>
+                            <td>48.4 MB</td>
+                            <td>16.8 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script>
+        const rows = [{ "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "DurationMs", "value": 997.196503 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ColdStartMs", "value": 1208.568408 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 81.09375 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.4064407348632812 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "InitDurationMs", "value": 255.19 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 8.951089 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 8.951089 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 82.5390625 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 1.9209671020507812 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2.386576 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2.386576 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 82.5390625 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.0227737426757812 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 64.756996 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 64.756996 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 83.34375 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.1168441772460938 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 3.00384 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 3.00384 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 83.43359375 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.2498245239257812 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2.497945 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2.497945 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 83.43359375 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.3593826293945312 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "DurationMs", "value": 35.354864 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ColdStartMs", "value": 152.218027 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 85.8125 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 1.656219482421875 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "RestoreDurationMs", "value": 814.47 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2.607127 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2.607127 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 86.0859375 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.5244216918945312 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2.387481 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2.387481 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 86.0859375 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.6027755737304688 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2.42778 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2.42778 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 86.0859375 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.6975860595703125 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 3.094023 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 3.094023 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 86.984375 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.7759017944335938 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2.947588 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2.947588 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 87.02734375 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.854248046875 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "DurationMs", "value": 214.242178 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ColdStartMs", "value": 253.931076 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 23.34765625 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 1.993865966796875 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "InitDurationMs", "value": 78.67 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 24.195012 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 24.195012 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 24.9140625 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 0.571502685546875 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1.894256 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1.894256 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 24.9140625 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 0.6655120849609375 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1.75986 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1.75986 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 24.9140625 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 0.7442245483398438 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1.666454 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1.666454 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 24.9140625 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 0.8254470825195312 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1.79659 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1.79659 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 24.9140625 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 0.9038772583007812 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "DurationMs", "value": 6160.054096 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ColdStartMs", "value": 6402.347855 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 100.37109375 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.9821548461914062 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "InitDurationMs", "value": 262.8 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 3062.714638 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 3062.714638 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 106.09765625 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 5.897239685058594 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2561.189117 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2561.189117 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 107.88671875 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 6.797554016113281 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2720.522737 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2720.522737 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 108.23046875 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 6.9089202880859375 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2447.249605 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2447.249605 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 109.08203125 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 7.5316619873046875 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2586.20839 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2586.20839 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 111.29296875 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 8.632545471191406 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "DurationMs", "value": 3361.690108 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ColdStartMs", "value": 3496.335292 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 108.72265625 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 3.1391220092773438 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "RestoreDurationMs", "value": 842.74 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2376.575459 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2376.575459 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 111.73828125 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 5.4595947265625 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2454.857755 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2454.857755 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 113.75390625 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 6.045768737792969 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1913.779571 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1913.779571 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 114.81640625 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 6.222503662109375 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2013.493996 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2013.493996 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 115.4609375 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 6.627471923828125 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 2077.420714 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 2077.420714 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 117.38671875 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 6.931396484375 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "DurationMs", "value": 1695.343939 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ColdStartMs", "value": 1737.529545 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 34.45703125 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 2.4044952392578125 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "InitDurationMs", "value": 87.25 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1350.732493 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1350.732493 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 36.7734375 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 3.553253173828125 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1432.420598 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1432.420598 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 37.5390625 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 4.079826354980469 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1433.582764 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1433.582764 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 37.5390625 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 4.624229431152344 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1313.855497 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1313.855497 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 37.5390625 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 5.154266357421875 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "DurationMs", "value": 1356.300346 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "WarmStartMs", "value": 1356.300346 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "MemoryWorkingSetMb", "value": 37.5390625 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "ManagedHeapMb", "value": 5.684257507324219 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "DurationMs", "value": 5121.585626 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "ColdStartMs", "value": 5267.091766 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 554.421875 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 479.70211029052734 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "InitDurationMs", "value": 249.6 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 3459.328265 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 3459.328265 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 660.5234375 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 608.6068878173828 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 3602.511526 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 3602.511526 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 971.03125 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 736.8847122192383 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 3106.536643 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 3106.536643 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 627.8515625 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 480.9496765136719 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 3476.116278 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 3476.116278 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 577.46484375 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 478.52925872802734 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 3310.370974 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 3310.370974 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 726.3984375 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 480.63922119140625 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "DurationMs", "value": 5227.640288 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "ColdStartMs", "value": 5276.812407 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 564.984375 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 480.0931930541992 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "RestoreDurationMs", "value": 824.88 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 3244.644405 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 3244.644405 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 670.9765625 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 609.583610534668 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 4003.01744 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 4003.01744 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 977.32421875 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 737.1489410400391 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2607.298675 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2607.298675 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 639.30859375 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 480.99505615234375 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2688.854825 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2688.854825 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 688.1015625 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 601.668083190918 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2597.456113 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2597.456113 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 754.4375 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 609.1701736450195 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "DurationMs", "value": 3034.88892 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "ColdStartMs", "value": 3071.621883 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 500.91796875 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 479.09668731689453 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "InitDurationMs", "value": 81.39 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2587.515656 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2587.515656 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 602.71484375 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 607.28955078125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2831.390463 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2831.390463 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 707.80078125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 735.3826217651367 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2852.018125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2852.018125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 785.453125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 479.42809295654297 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2508.507792 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2508.507792 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 675.04296875 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 479.28849029541016 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "DurationMs", "value": 2440.567531 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "WarmStartMs", "value": 2440.567531 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "MemoryWorkingSetMb", "value": 534.8125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "ManagedHeapMb", "value": 479.2850036621094 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "DurationMs", "value": 0.605883 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "ColdStartMs", "value": 2377.55344 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 115.61328125 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 18.131149291992188 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "InitDurationMs", "value": 2577.83 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.142227 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.142227 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 115.9765625 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 18.98876953125 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.12224 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.12224 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 115.9765625 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 16.93193817138672 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.127204 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.127204 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 118.47265625 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 16.98680877685547 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.122117 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.122117 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 118.4765625 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 17.02593231201172 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.122962 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.122962 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 118.6640625 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 17.083572387695312 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "DurationMs", "value": 2.777444 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "ColdStartMs", "value": 68.039228 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 117.12890625 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 18.340606689453125 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "RestoreDurationMs", "value": 716.65 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.128263 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.128263 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 117.484375 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 19.186080932617188 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.124898 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.124898 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 119.83984375 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 17.10399627685547 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.134794 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.134794 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 119.9296875 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 17.166717529296875 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.128804 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.128804 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 119.9296875 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 17.213775634765625 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.127384 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.127384 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 119.984375 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 17.252952575683594 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "DurationMs", "value": 0.117022 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "ColdStartMs", "value": 2321.556681 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 48.375 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 16.757301330566406 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "InitDurationMs", "value": 2376.62 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.11131 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.11131 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 48.375 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 16.828994750976562 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.108882 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.108882 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 48.375 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 16.871200561523438 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.113829 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.113829 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 48.6171875 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 16.910385131835938 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.111319 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.111319 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 49.9296875 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 12.059120178222656 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "DurationMs", "value": 0.109875 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "WarmStartMs", "value": 0.109875 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "MemoryWorkingSetMb", "value": 49.9296875 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "ManagedHeapMb", "value": 12.106101989746094 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1252.386503 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 8.951089 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2.386576 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 64.756996 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 3.00384 }, { "function": "DynamoQueryClr", "deployment_type": "StandardCLR", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2.497945 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 849.824864 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2.607127 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2.387481 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2.42778 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 3.094023 }, { "function": "DynamoQuerySnapStart", "deployment_type": "SnapStart", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2.947588 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 292.912178 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 24.195012 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1.894256 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1.75986 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1.666454 }, { "function": "DynamoQueryNativeAot", "deployment_type": "NativeAOT", "example": "dynamo-query", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1.79659 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 6422.854096 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 3062.714638 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2561.189117 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2720.522737 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2447.249605 }, { "function": "ImageProcessingClr", "deployment_type": "StandardCLR", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2586.20839 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 4204.430108 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2376.575459 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2454.857755 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1913.779571 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2013.493996 }, { "function": "ImageProcessingSnapStart", "deployment_type": "SnapStart", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 2077.420714 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 1, "phase": "cold", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1782.593939 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 2, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1350.732493 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 3, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1432.420598 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 4, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1433.582764 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 5, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1313.855497 }, { "function": "ImageProcessingNativeAot", "deployment_type": "NativeAOT", "example": "image-processing", "invocation": 6, "phase": "warm", "memory_mb": 512, "metric": "TotalExecutionMs", "value": 1356.300346 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 5371.185626 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3459.328265 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3602.511526 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3106.536643 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3476.116278 }, { "function": "CsvProcessingClr", "deployment_type": "StandardCLR", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3310.370974 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 6052.520288 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3244.644405 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 4003.01744 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2607.298675 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2688.854825 }, { "function": "CsvProcessingSnapStart", "deployment_type": "SnapStart", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2597.456113 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 1, "phase": "cold", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 3116.2789199999997 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 2, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2587.515656 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 3, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2831.390463 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 4, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2852.018125 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 5, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2508.507792 }, { "function": "CsvProcessingNativeAot", "deployment_type": "NativeAOT", "example": "csv-processing", "invocation": 6, "phase": "warm", "memory_mb": 1024, "metric": "TotalExecutionMs", "value": 2440.567531 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 2578.435883 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.142227 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.12224 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.127204 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.122117 }, { "function": "GeoSpatialLookupClr", "deployment_type": "StandardCLR", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.122962 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 719.4274439999999 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.128263 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.124898 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.134794 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.128804 }, { "function": "GeoSpatialLookupSnapStart", "deployment_type": "SnapStart", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.127384 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 1, "phase": "cold", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 2376.737022 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 2, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.11131 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 3, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.108882 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 4, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.113829 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 5, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.111319 }, { "function": "GeoSpatialLookupNativeAot", "deployment_type": "NativeAOT", "example": "geospatial-lookup", "invocation": 6, "phase": "warm", "memory_mb": 4096, "metric": "TotalExecutionMs", "value": 0.109875 }];
+        const palette = ["#c084fc", "#ffd166", "#ff7b9c", "#70d6ff", "#b8f28b"];
+        const metricUnits = {
+            TotalExecutionMs: "ms",
+            DurationMs: "ms", InitDurationMs: "ms", RestoreDurationMs: "ms",
+            ColdStartMs: "ms", WarmStartMs: "ms", MemoryWorkingSetMb: "MB", ManagedHeapMb: "MB",
+        };
+
+        Chart.defaults.color = "#b4a8c9";
+        Chart.defaults.borderColor = "#3b2d50";
+        Chart.defaults.font.family = "'IBM Plex Mono', ui-monospace, monospace";
+
+        function datasetsFor(workload, metric) {
+            const workloadRows = rows.filter(row => row.example === workload && row.metric === metric);
+            const functions = [...new Set(workloadRows.map(row => row.function))];
+            return functions.map((functionName, index) => {
+                const color = palette[index % palette.length];
+                const label = functionName.replace(workload.replaceAll("-", " "), "").trim() || functionName;
+                return {
+                    label,
+                    data: workloadRows
+                        .filter(row => row.function === functionName)
+                        .sort((a, b) => a.invocation - b.invocation)
+                        .map(row => ({ x: Number(row.invocation), y: Number(row.value) })),
+                    borderColor: color,
+                    backgroundColor: color,
+                    pointRadius: 3,
+                    tension: 0.2,
+                };
+            });
+        }
+
+        function renderCharts() {
+            document.querySelectorAll(".metric-select").forEach(select => {
+                const canvas = document.querySelector(`[data-chart="${CSS.escape(select.dataset.workload)}"]`);
+                const chart = new Chart(canvas, {
+                    type: "line",
+                    data: { datasets: datasetsFor(select.dataset.workload, select.value) },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: "nearest", intersect: false },
+                        scales: {
+                            x: { type: "linear", title: { display: true, text: "Invocation" }, ticks: { stepSize: 1, precision: 0 } },
+                            y: { beginAtZero: true, title: { display: true, text: metricUnits[select.value] } },
+                        },
+                        plugins: { legend: { position: "bottom" } },
+                    },
+                });
+                select.addEventListener("change", () => {
+                    chart.data.datasets = datasetsFor(select.dataset.workload, select.value);
+                    chart.options.scales.y.title.text = metricUnits[select.value];
+                    chart.update();
+                });
+            });
+        }
+        renderCharts();
+    </script>
+</body>
+
+</html>

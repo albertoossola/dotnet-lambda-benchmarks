@@ -28,6 +28,16 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# AWS CDK and Node.js
+.cdk.out/
+cdk.out/
+node_modules/
+*.tsbuildinfo
+
+# Benchmark reports
+benchmark-results/
+benchmark-results-cold/
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
@@ -55,3 +65,13 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+assets/**
+
+# Python
+**/uv.lock
+**/__pycache__/
+
+# Node
+**/node_modules/
+package-lock.json
