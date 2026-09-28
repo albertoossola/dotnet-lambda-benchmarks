@@ -337,6 +337,28 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def write_html(path: Path, rows: list[dict[str, Any]]) -> None:
     workloads = list(dict.fromkeys(row["example"] for row in rows))
+    descriptions = {
+        "dynamo-query": {
+            "what": "Reads one item from DynamoDB and returns the matching record.",
+            "expected": "The handler body should be very fast once the AWS SDK client and connection are ready. Cold latency is mainly runtime startup or snapshot restore plus the first DynamoDB request.",
+            "explanation": "StandardCLR pays .NET initialization on a new execution environment. SnapStart restores a prepared CLR process, but must still restore memory and recreate network connections after restore. NativeAOT avoids most runtime startup and usually has the smallest cold overhead.",
+        },
+        "image-processing": {
+            "what": "Downloads an image from S3 and encodes it to PNG repeatedly, with optional parallelism.",
+            "expected": "Warm duration is dominated by image decoding and PNG encoding. Cold latency adds runtime startup or restore overhead, but the request work remains the largest component.",
+            "explanation": "SnapStart can preserve initialized ImageSharp state, but it cannot precompute the request-specific S3 download or image transformation. Equal memory settings make CPU allocation comparable; differences mainly reflect restore work and runtime/library behavior.",
+        },
+        "csv-processing": {
+            "what": "Downloads a CSV from S3, parses every row, and serializes the parsed data to JSON.",
+            "expected": "This is a memory- and allocation-heavy workload. Warm duration should dominate the comparison, while cold latency also includes CLR initialization or SnapStart restore.",
+            "explanation": "SnapStart does not remove the request-specific download, decoding, parsing, or serialization. It also restores a large managed heap and runs the post-restore S3 connection warmup, so cold SnapStart can be slower even when it reduces CLR initialization.",
+        },
+        "geospatial-lookup": {
+            "what": "Loads a Parquet location dataset, builds an in-memory index, and finds the nearest location for a coordinate.",
+            "expected": "The lookup itself should be very fast after the index exists. Cold latency is dominated by loading and indexing the dataset for StandardCLR and NativeAOT.",
+            "explanation": "This is the workload where SnapStart has the clearest advantage: the expensive dataset load and index construction happen before the snapshot, so restored environments can serve the lookup without repeating that initialization.",
+        },
+    }
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     chart_rows = list(rows)
     by_invocation: dict[tuple[Any, ...], dict[str, Any]] = {}
@@ -505,6 +527,10 @@ def write_html(path: Path, rows: list[dict[str, Any]]) -> None:
             f'<section class="workload"><div class="section-heading"><div>'
             f'<p class="eyebrow">Workload</p><h2>{text(workload)}</h2></div>'
             f'<span class="count">{len(table_rows)} deployment targets</span></div>'
+            f'<details class="workload-description"><summary>About this workload</summary>'
+            f'<div class="description-grid"><div><h3>What it does</h3><p>{text(descriptions.get(workload, {}).get("what", "Benchmark workload description unavailable."))}</p></div>'
+            f"<div><h3>Expected results</h3><p>{text(descriptions.get(workload, {}).get('expected', 'Compare warm handler duration separately from cold startup overhead.'))}</p></div>"
+            f"<div><h3>Why strategies differ</h3><p>{text(descriptions.get(workload, {}).get('explanation', 'Deployment strategies trade runtime startup, restore work, and steady-state execution differently.'))}</p></div></div></details>"
             f'<div class="summaries">{"".join(summaries)}</div>'
             f'<div class="chart"><div class="chart-heading"><h3>Metric trend</h3>'
             f'<label>Metric <select class="metric-select" data-workload="{text(workload)}">'
@@ -529,10 +555,11 @@ main {{ max-width:1180px; margin:auto; padding:48px 24px 72px; }} header {{ disp
 h1,h2,p {{ margin:0; }} h1 {{ font:700 clamp(2rem,5vw,4rem)/.98 'Space Grotesk',ui-sans-serif,sans-serif; letter-spacing:0; }} h2 {{ font:700 1.7rem 'Space Grotesk',ui-sans-serif,sans-serif; }} .dek {{ color:var(--muted); margin-top:12px; }} .stamp {{ color:var(--muted); white-space:nowrap; font-size:.85rem; }}
 .workload {{ background:color-mix(in srgb,var(--card) 94%,white 6%); border:1px solid var(--line); margin:24px 0; box-shadow:0 16px 42px #0008; }} .section-heading {{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:24px 26px 18px; }}
 .eyebrow {{ color:var(--accent); font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }} .count {{ color:var(--muted); font-size:.85rem; }} .summaries {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; padding:0 26px 24px; }}
+.workload-description {{ border-top:1px solid var(--line); padding:0 26px; }} .workload-description summary {{ cursor:pointer; color:var(--accent); font-weight:700; padding:14px 0; }} .description-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:0 0 22px; }} .description-grid h3 {{ color:var(--ink); font-size:.82rem; margin:0 0 5px; }} .description-grid p {{ color:var(--muted); font-size:.88rem; margin:0; }}
 .summary {{ background:var(--accent-light); border-left:4px solid var(--accent); padding:14px 16px; }} .deployment {{ display:block; color:var(--muted); font-size:.78rem; }} .summary-stats {{ display:flex; gap:16px; margin-top:6px; }} .summary-stats > div {{ flex:1; min-width:0; }} .summary-stats strong {{ display:block; font:700 1.25rem 'IBM Plex Mono',ui-monospace,monospace; margin:2px 0; }} .summary-stats small {{ display:block; color:var(--muted); font-size:.72rem; }}
 .chart {{ border-top:1px solid var(--line); padding:20px 26px 24px; }} .chart-heading {{ display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:12px; }} h3 {{ font-size:1rem; margin:0; }} label {{ color:var(--muted); font-size:.82rem; }} select {{ border:1px solid var(--line); border-radius:4px; background:#100c16; color:var(--ink); padding:7px 28px 7px 9px; font:inherit; }} .chart-canvas {{ position:relative; height:280px; }}
 .table-wrap {{ overflow-x:auto; border-top:1px solid var(--line); }} table {{ border-collapse:collapse; width:100%; min-width:760px; }} th,td {{ padding:12px 14px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }} th:first-child,td:first-child {{ text-align:left; }} thead th {{ color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; background:#17101f; }} tbody th {{ font-weight:650; }} tbody tr:last-child th,tbody tr:last-child td {{ border-bottom:0; }} tbody tr:hover {{ background:#271936; }}
-@media (max-width:650px) {{ main {{ padding:28px 14px 48px; }} header {{ display:block; }} .stamp {{ display:block; margin-top:18px; }} .section-heading {{ padding:20px 16px 14px; }} .summaries,.chart {{ padding-left:16px; padding-right:16px; }} .chart-heading {{ align-items:flex-start; flex-direction:column; }} }}
+@media (max-width:800px) {{ .description-grid {{ grid-template-columns:1fr; gap:14px; }} }} @media (max-width:650px) {{ main {{ padding:28px 14px 48px; }} header {{ display:block; }} .stamp {{ display:block; margin-top:18px; }} .section-heading {{ padding:20px 16px 14px; }} .summaries,.chart,.workload-description {{ padding-left:16px; padding-right:16px; }} .chart-heading {{ align-items:flex-start; flex-direction:column; }} }}
 </style></head><body><main>
 <header><div><p class="eyebrow">Benchmark report</p><h1>.NET Lambda results</h1><p class="dek">Median performance grouped by workload and deployment strategy.</p></div><div class="stamp">Generated {text(generated_at)}<br>{len(rows)} metric observations</div></header>
 {"".join(sections)}
@@ -728,7 +755,7 @@ def main() -> int:
     if not rows:
         raise RuntimeError("No performance metrics were collected")
     csv_path = args.output_dir / "metrics.csv"
-    html_path = args.output_dir / "metrics.html"
+    html_path = args.output_dir / "index.html"
     plot_path = args.output_dir / "metrics.png"
     write_csv(csv_path, rows)
     write_html(html_path, rows)
